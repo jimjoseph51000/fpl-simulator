@@ -2,7 +2,7 @@
 
 This is the code repository for the implementation of a Monte Carlo Policy Iteration Learning over player transfer strategies. The combination of the model and the player embedding allows a degree of interpretability to make sense of transfer strategies.
 
-![Transfer Simulation ](sim.png)
+![Transfer Simulation ](sim.jpg)
 
 Parameters  to work on :
 
