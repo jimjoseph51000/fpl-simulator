@@ -14,7 +14,16 @@ Parameters  to work on :
 
 
 
+
+
 TODOs:
-complete the step function
-The state vector should be replicated. Also, the network doesnt output the state. So how will you get the next state vector? This has to be some form of embedding. 
+1. transfer in/out implementation (priyanka)
+2. rankings table for every game week [priyanka]
+3. apply this wherever - step function etc (JJ)
+4. episode replication function (JJ)
+5. player embedding refinement (anshuman)
+6. read cost from csv (JJ)
+7. sanity checks - 
+	 1. transfer in/out should be possible at every week -do some random transfers at every game week (using some random player profile) [priyanka]
+	 2. player embedding over every game week
 
