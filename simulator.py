@@ -142,7 +142,8 @@ class FPLSimulator(BaseSimulator):
     #3. creating the ids, points and cost for all  players
     #creating a dummy cost matrix for now
     self.all_player_ids = np.unique(np.concatenate([np.unique(all_week_data[i].index) for i in range(len(all_week_data))])) # (620,)
-    self.all_player_cost = np.random.normal(5, 1, size=(self.all_player_ids.shape[0], len(all_week_data))).round(2) # (620,10)
+    # self.all_player_cost = np.random.normal(5, 1, size=(self.all_player_ids.shape[0], len(all_week_data))).round(2) # (620,10)
+    self.all_player_cost = self.load_all_player_cost_from_csv() # (620,10)
     self.all_player_points = np.zeros((self.all_player_ids.shape[0], len(all_week_data)))
     self.all_player_points, self.all_player_other_data = self.get_data_for_all_players(all_week_data, self.all_player_ids)
     print(self.all_player_ids.shape, self.all_player_points.shape, self.all_player_cost.shape, self.all_player_other_data.shape) # this is our universe
@@ -187,6 +188,14 @@ class FPLSimulator(BaseSimulator):
 
     return all_week_data
 
+  def load_all_player_cost_from_csv(self):
+    all_player_cost = pd.read_csv("Player_Cost_Weekwise/all_player_costs.csv")
+    all_player_cost = all_player_cost.T.iloc[1:,:self.current_week]
+    all_player_cost.index = all_player_cost.index.map(int)
+    res = all_player_cost.loc[self.all_player_ids,:] # (620,10)
+    # print(np.array(res.head()))
+    return np.array(res)
+    
 
   # def get_points_for_players(all_week_data: list, player_ids : np.ndarray):
   #   '''
