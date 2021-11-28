@@ -42,6 +42,8 @@ class BaseSimulator():
     self.state = self.state[:,0] # first week
     return self.state
   
+
+  
   def create_one_hot_embedding(self, player_ids):
     # self.all_player_ids # (620,)
     # player_ids # (15,10)
@@ -106,7 +108,7 @@ class BaseSimulator():
 
 class FPLSimulator(BaseSimulator):
 
-  def __init__(self, current_week, fpl_manager_id, state_dim = 10, action_dim = 5):
+  def __init__(self, current_week, fpl_manager_id, req_cols = [], state_dim = 10, action_dim = 5):
     super(FPLSimulator, self).__init__(state_dim, action_dim)
     self.current_week = current_week
     self.fpl_manager_id = fpl_manager_id
@@ -114,10 +116,13 @@ class FPLSimulator(BaseSimulator):
     self.all_player_ids = None
     self.all_player_cost = None
     self.all_player_points = None
-
+    self.all_player_other_data_cols = req_cols
+    self.all_player_other_data = None
+    
     self.actual_players_ids = None
     self.actual_players_points = None
     self.actual_player_cost = None
+    self.actual_player_other_data = None
     
     self.transfers_in_episode = []
     self.running_player_ids = None
@@ -127,10 +132,11 @@ class FPLSimulator(BaseSimulator):
   def reset(self):
       self.transfers_in_episode = []
       return super(FPLSimulator, self).reset()
-
+    
   def init_fpl_team(self):
     #1. load from the CSV
     all_week_data = self.load_all_player_weekwise_data(self.current_week)
+    
     #2. get the team
     self.actual_players_ids = self.get_players_of_manager(self.fpl_manager_id, self.current_week) # (15, W)
     #3. creating the ids, points and cost for all  players
@@ -138,8 +144,8 @@ class FPLSimulator(BaseSimulator):
     self.all_player_ids = np.unique(np.concatenate([np.unique(all_week_data[i].index) for i in range(len(all_week_data))])) # (620,)
     self.all_player_cost = np.random.normal(5, 1, size=(self.all_player_ids.shape[0], len(all_week_data))).round(2) # (620,10)
     self.all_player_points = np.zeros((self.all_player_ids.shape[0], len(all_week_data)))
-    self.all_player_points = self.get_points_for_all_players(all_week_data, self.all_player_ids)
-    print(self.all_player_ids.shape, self.all_player_points.shape, self.all_player_cost.shape) # this is our universe
+    self.all_player_points, self.all_player_other_data = self.get_data_for_all_players(all_week_data, self.all_player_ids)
+    print(self.all_player_ids.shape, self.all_player_points.shape, self.all_player_cost.shape, self.all_player_other_data.shape) # this is our universe
     
     # actual_players_points = get_points_for_players(all_week_data, actual_players_ids) # (15,W) before code
     #4. creating the ids, points and cost for actual players
@@ -147,22 +153,36 @@ class FPLSimulator(BaseSimulator):
     per_week_total_points = self.actual_players_points.sum(axis=0) #(W,)
     print('cumsum of per_week_total_points: ',np.cumsum(per_week_total_points))
     self.actual_player_cost = self.get_player_info_matrix(self.all_player_cost, self.actual_players_ids)
-
-    print(self.actual_players_ids.shape, self.actual_players_points.shape, self.actual_player_cost.shape) # this is our tuple
+    
+    self.actual_player_other_data = []
+    for i in range(len(self.all_player_other_data_cols)):
+      self.actual_player_other_data.append(self.get_player_info_matrix(self.all_player_other_data[i], self.actual_players_ids))
+    self.actual_player_other_data = np.array(self.actual_player_other_data)
+    
+    print(self.actual_players_ids.shape, self.actual_players_points.shape, self.actual_player_cost.shape, self.actual_player_other_data.shape) # this is our tuple
     
     self.running_player_ids = np.array(self.actual_players_ids)
     
     return 
+  
+  
+  def load_from_csv_player_types(self):
+    df_type = pd.read_csv("player_types.csv", index_col=0)
+    df_type = df_type.set_index("id")
+    return df_type
   
   def load_all_player_weekwise_data(self, current_week:int):
     '''
     returns list of dataframes (W,)
     '''
     all_week_data = []
+    player_types_df = self.load_from_csv_player_types()
     for week in range(1,current_week+1):
       df = pd.read_csv("Players_Weekwise/week_"+str(week)+".csv")
-      df = df[['id', 'stats.total_points']]
+
       df = df.set_index('id')
+      df = df.join(player_types_df, on='id', how='left')
+      df = df[['stats.total_points'] + self.all_player_other_data_cols]
       all_week_data.append(df)
 
     return all_week_data
@@ -180,8 +200,23 @@ class FPLSimulator(BaseSimulator):
   #     players_points.append(all_week_data[i].loc[player_ids[:,i], :]['stats.total_points'])
   #   return np.array(players_points).T
 
-  def get_points_for_all_players(self, all_week_data: list, player_ids : np.ndarray):
+#   def get_points_for_all_players(self, all_week_data: list, player_ids : np.ndarray):
+#     all_player_points = np.zeros((self.all_player_ids.shape[0], len(all_week_data)))
+#     for i in range(len(all_week_data)):
+#       # cur_player_ids = np.unique(np.array(all_week_data[i].index))
+#       cur_player_ids = np.unique(np.array(all_week_data[i].index)) # (N,)
+#       act_P_reshaped = np.broadcast_to(cur_player_ids[:,np.newaxis], (cur_player_ids.shape[0],self.all_player_ids.shape[0])) # (N, 620)
+#       all_P_reshaped = np.broadcast_to(self.all_player_ids[np.newaxis, :], (cur_player_ids.shape[0],self.all_player_ids.shape[0]) )# (N,620)
+#       match_idx = np.argwhere(act_P_reshaped == all_P_reshaped) # this should have all the matches, lets do an assertion check
+#       # match_idx[:,-1].reshape
+#       assert(match_idx.shape == (cur_player_ids.shape[0],2)) # (N,2)
+#       act_match_idx = match_idx[:,-1]
+#       all_player_points[act_match_idx,i] = all_week_data[i].loc[cur_player_ids, :]['stats.total_points']
+#     return all_player_points
+
+  def get_data_for_all_players(self, all_week_data: list, player_ids : np.ndarray):
     all_player_points = np.zeros((self.all_player_ids.shape[0], len(all_week_data)))
+    all_player_other_data = np.zeros((len(self.all_player_other_data_cols), self.all_player_ids.shape[0], len(all_week_data)) , dtype=np.object)
     for i in range(len(all_week_data)):
       # cur_player_ids = np.unique(np.array(all_week_data[i].index))
       cur_player_ids = np.unique(np.array(all_week_data[i].index)) # (N,)
@@ -192,9 +227,9 @@ class FPLSimulator(BaseSimulator):
       assert(match_idx.shape == (cur_player_ids.shape[0],2)) # (N,2)
       act_match_idx = match_idx[:,-1]
       all_player_points[act_match_idx,i] = all_week_data[i].loc[cur_player_ids, :]['stats.total_points']
-    return all_player_points
-
-
+      for j,col in enumerate(self.all_player_other_data_cols):
+        all_player_other_data[j,act_match_idx,i] = all_week_data[i].loc[cur_player_ids, :][col]
+    return all_player_points, all_player_other_data
 
   def get_players_of_manager(self, manager_id:int, current_week:int):
     '''
