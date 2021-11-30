@@ -8,6 +8,26 @@ import numpy as np
 	2. get the cost for a  set of player ids
 '''
 
+profiles = [{'cols': ['stats.minutes'],
+              'order': [False],
+              'prob_dist': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]},
+            {'cols': ['stats.own_goals', 'stats.yellow_cards', 'stats.red_cards'],
+              'order': [True, True, True],
+              'prob_dist': [0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0]},
+            {'cols': ['stats.ict_index'],
+              'order': [False],
+              'prob_dist': [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]},
+            {'cols': ['selected_by_percent'],
+              'order': [False],
+              'prob_dist': [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]},
+            {'cols': ['saves_goal_conceded_ratio',
+              'stats.saves',
+              'stats.clean_sheets',
+              'stats.penalties_saved',
+              'stats.penalties_missed'],
+              'order': [False, False, False, False, True],
+              'prob_dist': [1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0]}]
+
 
 class Scout():
 
@@ -28,27 +48,25 @@ class Scout():
 			returns ndarray of players_ids . shape :(k,)
 
 		'''
-		ROI = self.env.actual_players_points/self.env.actual_player_cost
+    ROI = self.env.actual_players_points/self.env.actual_player_cost
 		indices = np.argsort(ROI, 0)
 		sorted_ids_based_on_ROI = self.env.actual_players_ids[:,self.week_idx][indices[:,self.week_idx]][:k]
 		return sorted_ids_based_on_ROI
-
-
-	#anshuman
-	def find_transfer_in_candidates(self, k:int, player_profile:np.ndarray):
+  
+	def find_transfer_in_candidates(self, k:int, player_profile_idx:int):
 		'''
-		use clustering or manually defined set of mutually exclusive list of players. Each set of players are of one profile. 
-		This function returns top K players of one set which is mapped to the player_profile
-		Parameters:
-		-----------
-		k : the top K players who should be transferred out
-		player_profile: shape : (N,) . This is a softmax prob distributed 1-D array for player profile. This is one of the input to the recruiter model and
-									transfer matches
-		-----------
+			This functions finds the candidates in our FPL manager team to transfer out in that particular game week
+			Parameters:
+			-----------
+			k : the top K players who should be transferred in
+			-----------
 			returns ndarray of players_ids . shape :(k,)
-		
+
 		'''
-		pass
+		# print(self.env.all_week_data[self.week_idx].columns)
+		profile = profiles[player_profile_idx]
+		return list(self.env.all_week_data[self.week_idx].sort_values(by=profile['cols'], ascending=profile['order']).index)[:k]
+
 
 	def get_transfer_in_out_players(self, balance:float, transfer_in_candidates:np.ndarray, transfer_out_candidates:np.ndarray):
 		'''
@@ -60,6 +78,7 @@ class Scout():
 			transfer_in_candidates:np.ndarray . shape : (k,) : the ids of players returned from the find_transfer_in_candidates function
 			transfer_out_candidates:np.ndarray . shape : (k,): the ids of players returned from the find_transfer_out_candidates function
 		 -----------
+
 		returns : ndarray : shape (15,10) . transfer in out matrix
 				  balance : the readjusted balance of the FPL team
 		'''
@@ -96,3 +115,4 @@ class Scout():
 			#assert(remaining_balance >= self.min_balance)
 
 		return transfer_in_out_mat, remaining_balance
+
