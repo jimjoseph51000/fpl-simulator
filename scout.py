@@ -48,7 +48,7 @@ class Scout():
 			returns ndarray of players_ids . shape :(k,)
 
 		'''
-    ROI = self.env.actual_players_points/self.env.actual_player_cost
+		ROI = self.env.actual_players_points/self.env.actual_player_cost
 		indices = np.argsort(ROI, 0)
 		sorted_ids_based_on_ROI = self.env.actual_players_ids[:,self.week_idx][indices[:,self.week_idx]][:k]
 		return sorted_ids_based_on_ROI
@@ -65,7 +65,8 @@ class Scout():
 		'''
 		# print(self.env.all_week_data[self.week_idx].columns)
 		profile = profiles[player_profile_idx]
-		return list(self.env.all_week_data[self.week_idx].sort_values(by=profile['cols'], ascending=profile['order']).index)[:k]
+		in_ids = list(self.env.all_week_data[self.week_idx].sort_values(by=profile['cols'], ascending=profile['order']).index)[:k]
+		return np.array(in_ids)
 
 
 	def get_transfer_in_out_players(self, balance:float, transfer_in_candidates:np.ndarray, transfer_out_candidates:np.ndarray):

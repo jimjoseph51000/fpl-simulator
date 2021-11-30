@@ -197,7 +197,7 @@ class FPLSimulator(BaseSimulator):
       df = df.merge(df_static, how='left', on='id')
       df = df.set_index('id')
       df = df.join(player_types_df, on='id', how='left')
-      df = df[['stats.total_points'] + self.all_player_other_data_cols]
+      #df = df[['stats.total_points'] + self.all_player_other_data_cols]
       df['saves_goal_conceded_ratio'] = df['stats.saves']/df['stats.goals_conceded']
       df = df.fillna(0)
 
