@@ -128,7 +128,7 @@ class FPLSimulator(BaseSimulator):
     self.running_player_ids = None
 
     self.all_week_data = None
-    
+
     self.init_fpl_team()
 
   def reset(self):
@@ -143,6 +143,7 @@ class FPLSimulator(BaseSimulator):
     self.actual_players_ids = self.get_players_of_manager(self.fpl_manager_id, self.current_week) # (15, W)
     #3. creating the ids, points and cost for all  players
     #creating a dummy cost matrix for now
+
     self.all_player_ids = np.unique(np.concatenate([np.unique(self.all_week_data[i].index) for i in range(len(self.all_week_data))])) # (620,)
     # self.all_player_cost = np.random.normal(5, 1, size=(self.all_player_ids.shape[0], len(self.all_week_data))).round(2) # (620,10)
     self.all_player_cost = self.load_all_player_cost_from_csv() # (620,10)
@@ -151,6 +152,7 @@ class FPLSimulator(BaseSimulator):
     print(self.all_player_ids.shape, self.all_player_points.shape, self.all_player_cost.shape, self.all_player_other_data.shape) # this is our universe
     
     # actual_players_points = get_points_for_players(self.all_week_data, actual_players_ids) # (15,W) before code
+
     #4. creating the ids, points and cost for actual players
     self.actual_players_points = self.get_player_info_matrix(self.all_player_points, self.actual_players_ids)
     per_week_total_points = self.actual_players_points.sum(axis=0) #(W,)
@@ -178,6 +180,7 @@ class FPLSimulator(BaseSimulator):
     '''
     returns list of dataframes (W,)
     '''
+
     # Get the static data and append to each week's data
     base_url = 'https://fantasy.premierleague.com/api/'
     # get data from bootstrap-static endpoint
@@ -185,6 +188,7 @@ class FPLSimulator(BaseSimulator):
     df_static = pd.DataFrame(r['elements'])
     cols = ['id', 'selected_by_percent']
     df_static = df_static[cols]
+
 
     all_week_data = []
     player_types_df = self.load_from_csv_player_types()
@@ -196,6 +200,7 @@ class FPLSimulator(BaseSimulator):
       df = df[['stats.total_points'] + self.all_player_other_data_cols]
       df['saves_goal_conceded_ratio'] = df['stats.saves']/df['stats.goals_conceded']
       df = df.fillna(0)
+
       all_week_data.append(df)
 
     return all_week_data
@@ -347,7 +352,7 @@ class FPLSimulator(BaseSimulator):
     match_idx = np.argwhere(act_P_reshaped == all_P_reshaped) # this should have all the matches, lets do an assertion check
     assert(match_idx.shape == (actual_players_ids.reshape(-1).shape[0],3))
     # just see how hte 
-    act_to_all_match_idx =  match_idx[:,-1].reshape((15,10))
+    act_to_all_match_idx =  match_idx[:,-1].reshape((actual_players_ids.shape[0],10))
     act_to_all_match_idx # (15,10)
 
     actual_player_info = all_player_info[act_to_all_match_idx, np.broadcast_to(np.arange(self.current_week)[np.newaxis, :]\
