@@ -335,7 +335,7 @@ class FPLSimulator(BaseSimulator):
     match_idx = np.argwhere(act_P_reshaped == all_P_reshaped) # this should have all the matches, lets do an assertion check
     assert(match_idx.shape == (actual_players_ids.reshape(-1).shape[0],3))
     # just see how hte 
-    act_to_all_match_idx =  match_idx[:,-1].reshape((15,10))
+    act_to_all_match_idx =  match_idx[:,-1].reshape((actual_players_ids.shape[0],10))
     act_to_all_match_idx # (15,10)
 
     actual_player_info = all_player_info[act_to_all_match_idx, np.broadcast_to(np.arange(self.current_week)[np.newaxis, :]\
