@@ -13,6 +13,8 @@ warnings.filterwarnings("ignore")
 
 import random
 import numpy as np
+# from scout import *
+
 random.seed(11)
 np.random.seed(11)
 # For each FPL Manager
@@ -57,13 +59,46 @@ class BaseSimulator():
     assert(comp_mask.shape == (self.all_player_ids.shape[0], player_ids.shape[1])) # (620,10) one hot encoded
     return comp_mask
 
-  def step(self, action:np.ndarray, week_idx:int = 0):
-    '''
-        action : ndarray shape:(N,). this is passed to get_transfer_in / out function to get the in/out players 
-        week_idx : int 
+  # def step(self, action:np.ndarray, week_idx:int = 0):
+  #   '''
+  #       action : ndarray shape:(N,). this is passed to get_transfer_in / out function to get the in/out players 
+  #       week_idx : int 
         
+  #   '''
+  #   #writing dummy code for now just to simulate
+
+  #   # 1. the recruiter has already given us a profile which is the action
+  #   # 2. find a transfer_in players which considers this profile
+  #   # 3. find transfer_out_players
+  #   # 4. do the transfer
+    
+  #   # new_team_player_ids = np.array(self.running_player_ids)
+  #   # print(self.all_player_points.shape, self.running_player_ids.shape)
+  #   running_player_points = self.get_player_info_matrix(self.all_player_points, self.running_player_ids)
+    
+  #   # the action here has to instigate a transfer. lets do random for now independant of action #TODO: change this code
+  #   sample_transfer_ins = self.get_swapped_in_players_test(self.running_player_ids, game_week = week_idx)
+    
+  #   self.transfers_in_episode.append(sample_transfer_ins) # IMP : this step is needed but change this to the actual transfer
+    
+  #   self.running_player_ids, new_running_player_points, _ = self.do_transfer(sample_transfer_ins, self.running_player_ids)
+    
+  #   self.state = self.create_one_hot_embedding(self.running_player_ids) # IMP : this step is needed
+  #   self.state = self.state[:,week_idx]
+    
+  #   rewards = self.compute_rewards_matrix(running_player_points, new_running_player_points)
+  #   r = rewards[week_idx]
+  #   done = True if week_idx == (self.current_week-1) else False
+    
+  #   return self.state, r, done
+  
+
+  def step(self, action_idx:int, week_idx:int = 0, scout=None):
     '''
-    #TODO: writing dummy code for now just to simulate
+        action : int. this is passed to get_transfer_in / out function to get the in/out players 
+        week_idx : int 
+        scout : the scout class object
+    '''
 
     # 1. the recruiter has already given us a profile which is the action
     # 2. find a transfer_in players which considers this profile
@@ -72,24 +107,30 @@ class BaseSimulator():
     
     # new_team_player_ids = np.array(self.running_player_ids)
     # print(self.all_player_points.shape, self.running_player_ids.shape)
-    running_player_points = self.get_player_info_matrix(self.all_player_points, self.running_player_ids)
+    prev_running_player_points = self.get_player_info_matrix(self.all_player_points, self.running_player_ids)
     
     # the action here has to instigate a transfer. lets do random for now independant of action #TODO: change this code
-    sample_transfer_ins = self.get_swapped_in_players_test(self.running_player_ids, game_week = week_idx)
+    # sample_transfer_ins = self.get_swapped_in_players_test(self.running_player_ids, game_week = week_idx)
+    
+    out_ids = scout.find_transfer_out_candidates()
+    # in_ids = np.array([1,3,4,5,6,101,200,330,500,600])
+    in_ids = scout.find_transfer_in_candidates(action_idx,out_ids)
+    sample_transfer_ins, self.balance = scout.get_transfer_in_out_players(in_ids, out_ids)
     
     self.transfers_in_episode.append(sample_transfer_ins) # IMP : this step is needed but change this to the actual transfer
     
-    self.running_player_ids, new_running_player_points, _ = self.do_transfer(sample_transfer_ins, self.running_player_ids)
+    self.running_player_ids, self.running_player_points, self.running_player_cost = self.do_transfer(sample_transfer_ins, self.running_player_ids)
     
     self.state = self.create_one_hot_embedding(self.running_player_ids) # IMP : this step is needed
     self.state = self.state[:,week_idx]
     
-    rewards = self.compute_rewards_matrix(running_player_points, new_running_player_points)
+    rewards = self.compute_rewards_matrix(prev_running_player_points, self.running_player_points)
     r = rewards[week_idx]
     done = True if week_idx == (self.current_week-1) else False
     
     return self.state, r, done
-  
+
+
   # 7. we need to have rewards in the simulator (check the diagram in the progress report)
   def compute_rewards_matrix(self, before_team_points , after_team_points):
     '''
@@ -108,11 +149,11 @@ class BaseSimulator():
 
 class FPLSimulator(BaseSimulator):
 
-  def __init__(self, current_week, fpl_manager_id, req_cols = [], state_dim = 10, action_dim = 5):
+  def __init__(self, current_week, fpl_manager_id, req_cols = [], state_dim = 10, action_dim = 5, balance= 100):
     super(FPLSimulator, self).__init__(state_dim, action_dim)
     self.current_week = current_week
     self.fpl_manager_id = fpl_manager_id
-    self.budget = 100
+    self.balance = balance
     self.all_player_ids = None
     self.all_player_cost = None
     self.all_player_points = None
@@ -125,7 +166,10 @@ class FPLSimulator(BaseSimulator):
     self.actual_player_other_data = None
     
     self.transfers_in_episode = []
+
     self.running_player_ids = None
+    self.running_player_cost = None
+    self.running_player_points = None
 
     self.all_week_data = None
 
@@ -133,6 +177,11 @@ class FPLSimulator(BaseSimulator):
 
   def reset(self):
       self.transfers_in_episode = []
+      self.running_player_ids = np.array(self.actual_players_ids)
+      self.running_player_points = np.array(self.actual_players_points)
+      self.running_player_cost = np.array(self.actual_player_cost)
+      self.balance = 100
+
       return super(FPLSimulator, self).reset()
     
   def init_fpl_team(self):
@@ -167,7 +216,9 @@ class FPLSimulator(BaseSimulator):
     print(self.actual_players_ids.shape, self.actual_players_points.shape, self.actual_player_cost.shape, self.actual_player_other_data.shape) # this is our tuple
     
     self.running_player_ids = np.array(self.actual_players_ids)
-    
+    self.running_player_points = np.array(self.actual_players_points)
+    self.running_player_cost = np.array(self.actual_player_cost)
+
     return 
   
   
@@ -270,7 +321,7 @@ class FPLSimulator(BaseSimulator):
 
   def get_swapped_in_players(self, actual_player_ids, num_tranfers = 8):
     '''
-      TODO: 
+      
       this is the output from the scout model based on suggestion from the recruiter NN model
       returns a (N_t, 15, 10) ndarray of transfers
       1.this array will have only one point set. Only one cell
@@ -294,7 +345,7 @@ class FPLSimulator(BaseSimulator):
   def get_swapped_in_players_test(self, actual_player_ids, num_transfers = 1, game_week = 0):
     '''
       this will just produce a random transfer for that game week
-      TODO: 
+      
       this is the output from the scout model based on suggestion from the recruiter NN model
       returns a (N_t, 15, 10) ndarray of transfers
       1.this array will have only one point set. Only one cell
@@ -321,7 +372,7 @@ class FPLSimulator(BaseSimulator):
 
   def get_swapped_out_players(self, actual_player_ids):
     '''
-      TODO: 
+      
       this is the output from some logic 
       returns a (N_t, 15, 10) ndarray of transfers
       1.this array will have only one point set. Only one cell
@@ -414,24 +465,7 @@ class FPLSimulator(BaseSimulator):
 
     return new_team_player_ids, new_team_player_points, new_team_player_cost
   
-  def todo_function(self):
-    # 8. TODO : budget and cost constraints need to be implemented
-
-    '''
-    --->CODE HERE
-    def get_swapped_out_mat(actual_players_ids):
-      # get swapped out player : ndarray.shape = (15,10) where 0 for not swapped and player_id for swapped out
-    def get_swapped_in_mat(actual_players_ids):
-      # get swapped in player : ndarray.shape = (15,10) where 0 for not swapped and player_id for swapped in
-
-    assert np.all((swapped_out_players > 0) & (swapped_in_players > 0) == False)
-
-
-    swapped out player -> adjust budget , cost matrix and points matrix
-    swapped in player -> adjust budget , cost matrix and points matrix
-    # 
-
-    '''
+ 
   def sample_visualization(self, num_proj = 10000, sample_projs = []):
     # 5 . lets see the simulate in action by having a few sets of transfers. These few sets of transfers are random strategies. Each strategy has some random transfers.
     # lets visualize some plots for these. 
@@ -459,7 +493,7 @@ class FPLSimulator(BaseSimulator):
       plt_label = ''
       plt_line = 'b--'
       new_cumsum = np.cumsum(new_team_player_points.sum(axis=0))
-      if new_cumsum[-1] > actual_cumsum[-1]: # TODO : change this back
+      if new_cumsum[-1] > actual_cumsum[-1]: 
       # if True:
         plots_final_points.append(new_cumsum[-1])
         plt_label = 'random transfer in-out {}'.format(i+1)
@@ -516,7 +550,7 @@ class FPLSimulator(BaseSimulator):
       plt_label = ''
       plt_line = 'b--'
       new_cumsum = np.cumsum(new_team_player_points.sum(axis=0))
-      if new_cumsum[-1] > actual_cumsum[-1]: #TODO : change this back
+      if new_cumsum[-1] > actual_cumsum[-1]: 
       # if True:
         plots_final_points.append(new_cumsum[-1])
         plt_label = 'random transfer in-out {}'.format(i+1)
