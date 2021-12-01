@@ -21,13 +21,13 @@ Parameters  to work on :
 
 
 TODOs:
-1. transfer in/out implementation (priyanka)
-2. rankings table for every game week [priyanka]
-3. apply this wherever - step function etc (JJ)
-4. episode replication function (JJ)
-5. player embedding refinement (anshuman)
-6. read cost from csv (JJ)
-7. sanity checks - 
-	 1. transfer in/out should be possible at every week -do some random transfers at every game week (using some random player profile) [priyanka]
-	 2. player embedding over every game week
-
+1. Training and hyperparameter tuning - a. epsilon, b.min balance, c.adding more player profiles d. gamma e.
+2. Embeddings - more player profiles, adding a zero profile for no transfer
+3. Experiments - 1. change reward function (1,0) 
+                 2. episode from episode 
+                 3. fpl manager vs fpl manager comparison
+                 4. Model inference for single manager - sample transfers , plots, loss plots
+                 5. env remaining balance
+                 6. cost based model 
+                 7. week wise transfer control
+                 8. 
