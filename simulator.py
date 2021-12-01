@@ -466,7 +466,7 @@ class FPLSimulator(BaseSimulator):
     return new_team_player_ids, new_team_player_points, new_team_player_cost
   
  
-  def sample_visualization(self, num_proj = 10000, sample_projs = []):
+  def sample_visualization(self, num_proj = 10000, sample_projs = [], file_save = ''):
     # 5 . lets see the simulate in action by having a few sets of transfers. These few sets of transfers are random strategies. Each strategy has some random transfers.
     # lets visualize some plots for these. 
     # we can call a trajectory as a set of transfers. We decide on a trajectory based on a strategy or decision. Look at the progress report to understand the terms and 
@@ -510,6 +510,9 @@ class FPLSimulator(BaseSimulator):
     plt.xlabel('weeks')
     plt.ylabel('points')
     # plt.legend()
+
+    if file_save != '':
+      plt.savefig(file_save, dpi=300, bbox_inches='tight')
     plt.show()
 
     print('actually_better_plots : {}'.format(len(actually_better_plots)))
