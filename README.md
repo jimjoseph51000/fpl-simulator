@@ -13,4 +13,15 @@ This is the code repository for the implementation of a Monte Carlo Policy Itera
 
 ## Training
 
+* Running the python notebook in google collab would be enough. All packages and dependencies are available by default.
+* Datasets are contained in the Player_Weekwise folder. Gameweek points data for 10 game weeks of the current running season.
+* Open simulator.ipynb and run everything.
+* For the current default manager_id the model will train and learn better transfers in relation to the current
+
+
+## Evaluation
+
+* The simulator.ipynb has the evaluation section
+* This is show the points per week and the cumulative sum plots
+* The cumsum plots should be better than the actual plot
 
