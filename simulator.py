@@ -141,9 +141,21 @@ class BaseSimulator():
     '''
     rewards = np.repeat(-1, self.current_week) # (10,)
     rewards = after_team_points.sum(axis=0) - before_team_points.sum(axis=0)
-    rewards[rewards <= 0] = -1 # play with these values too. TODO. check the fpl docs too
-    rewards[rewards > 0] = 0
-    return rewards
+    #rewards[rewards <= 0] = -1 # play with these values too. TODO. check the fpl docs too
+    #rewards[rewards > 0] = 0
+    #mask = (rewards >= 15) | (rewards >= 10) | (rewards <= -5) | (rewards <= 0)
+    # rewards[rewards >= 15] = 2
+    # rewards[rewards >= 10] = 1
+    # rewards[rewards <= -5] = -2
+    # rewards[rewards <= 0] = -1
+    # rewards[~mask] = 0
+    final_rewards = np.repeat(0, self.current_week) # (10,)
+    final_rewards[rewards >= 5] = 1
+    final_rewards[rewards >= 10] = 2
+    final_rewards[rewards <= 0] = -1
+    final_rewards[rewards <= -3] = -2
+    
+    return final_rewards
   
 
 
